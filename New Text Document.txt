@@ -1,0 +1,9 @@
+@echo off
+
+echo Starting FRM Microservice Reset...
+
+cd /d "%~dp0"
+
+powershell -ExecutionPolicy Bypass -File "%~dp0FRM_Auto_Migration.ps1"
+
+exit
