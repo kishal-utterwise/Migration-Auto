@@ -96,6 +96,8 @@ $form.BackColor = $cBlack
 $form.ForeColor = $cGreen
 $form.Font = $fMain
 $form.KeyPreview = $true
+$icoPath = Join-Path $root "assets\MigrationTool.ico"
+if (Test-Path $icoPath) { $form.Icon = New-Object System.Drawing.Icon($icoPath) }
 
 $rule = "=" * 120
 
