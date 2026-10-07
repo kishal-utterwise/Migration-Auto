@@ -1,0 +1,4 @@
+﻿# Run logs (can contain secrets from migrated sources)
+logs/
+**/logs/
+*.log
