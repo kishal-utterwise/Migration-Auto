@@ -1,7 +1,12 @@
-﻿# Run logs (can contain secrets from migrated sources)
+# Run logs (can contain secrets from migrated sources)
 logs/
 **/logs/
 *.log
 
 # Shortcuts hold absolute paths; generate locally with Create-Shortcut.bat
 *.lnk
+
+# Module registry: modules.json is shared; passwords stay on each PC (DPAPI, unreadable elsewhere)
+modules.local.json
+modules*.json.bak
+modules*.json.tmp

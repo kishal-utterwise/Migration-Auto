@@ -44,37 +44,28 @@ $ErrorActionPreference = "Stop"
 # SERVICE CONFIGURATION
 # -------------------------------------------
 $repoRoot = "D:\CBS\cbs_2.0_backend"
-$msRoot   = Join-Path $repoRoot "Microservices"
+
+# Modules come from ..\modules.json (edit them in Migration_Tool.bat > MODULES).
+# Modules with no Oracle SERVICE are PostgreSQL-only and skipped here; disabled ones run only via -Only.
+. (Join-Path (Split-Path $PSScriptRoot) "Migration_Modules.ps1")
+$allModules = @(Read-MigrationModules)
 
 $services = @(
-    @{
-        Name             = "CommonModules"
-        ConfigKey        = "Common-Module"
-        ProjectPath      = "$msRoot\CommonModules\Common-Modules\Common-Modules.csproj"
-        MigrationsFolder = "$msRoot\CommonModules\Common-Modules\Migrations"
-        DbService        = "COMMON_DB"
-        DbUser           = "common_db_user"
-        DbPassword       = "Abcd1234"
-    }
-    @{
-        Name             = "FRM"
-        ConfigKey        = "FRM"
-        ProjectPath      = "$msRoot\FRM\Frm\Frm.csproj"
-        MigrationsFolder = "$msRoot\FRM\Frm\Migrations"
-        DbService        = "FRM_DB"
-        DbUser           = "frm_db_user"
-        DbPassword       = "Abcd1234"
-    }
-    @{
-        Name             = "Reports"
-        ConfigKey        = "Reports"
-        ProjectPath      = "$msRoot\Reports\Reports\Reports.csproj"
-        MigrationsFolder = "$msRoot\Reports\Reports\Migrations"
-        DbService        = "REPORT_DB"
-        DbUser           = "report_db_user"
-        DbPassword       = "Abcd1234"
+    foreach ($m in $allModules) {
+        if (-not $m.OraService) { continue }
+        @{
+            Name             = $m.Name
+            Enabled          = $m.Enabled
+            ConfigKey        = $(if ($m.ConfigKey) { $m.ConfigKey } else { $m.Name })
+            ProjectPath      = $m.ProjectPath
+            MigrationsFolder = (Get-ModuleMigrationsFolder $m)
+            DbService        = $m.OraService
+            DbUser           = $m.OraUser
+            DbPassword       = $m.OraPassword
+        }
     }
 )
+if ($services.Count -eq 0) { throw "No module in modules.json has an Oracle SERVICE. Add one in Migration_Tool.bat > MODULES." }
 
 # -------------------------------------------
 # ORACLE CONNECTION
@@ -97,7 +88,17 @@ if ($Only) {
     # powershell -File passes "-Only A,B" as one string; split it here.
     $Only = @($Only | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     $services = @($services | Where-Object { $Only -contains $_.Name })
-    if ($services.Count -eq 0) { throw "No service matches -Only $($Only -join ',')" }
+    if ($services.Count -eq 0) { throw "No Oracle module matches -Only $($Only -join ',')" }
+}
+else {
+    $services = @($services | Where-Object { $_.Enabled })
+    if ($services.Count -eq 0) { throw "All Oracle modules are disabled in modules.json. Enable one or use -Only." }
+}
+
+foreach ($svc in $services) {
+    if (-not (Test-Path -LiteralPath $svc.ProjectPath)) { throw "$($svc.Name): project not found: $($svc.ProjectPath)" }
+    # Passwords live in modules.local.json per PC; a fresh clone has none yet.
+    if (-not $svc.DbPassword) { throw "$($svc.Name): no Oracle password on this PC. Enter it in Migration_Tool.bat > MODULES and save." }
 }
 
 if (-not (Test-Path $ora.SqlPlus)) { throw "sqlplus.exe not found at $($ora.SqlPlus)" }

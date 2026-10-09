@@ -1,28 +1,42 @@
+param(
+    [string[]]$Only    # module names, e.g. -Only FRM,Reports (default: all enabled modules)
+)
+
 $ErrorActionPreference = "Stop"
 
 # -------------------------------------------
 # SERVICE CONFIGURATION
 # -------------------------------------------
+# Modules come from ..\modules.json (edit them in Migration_Tool.bat > MODULES).
+# Modules with no PostgreSQL DATABASE are Oracle-only and skipped here.
+. (Join-Path (Split-Path $PSScriptRoot) "Migration_Modules.ps1")
+
 $services = @(
-    @{
-        Name = "CommonModules"
-        ProjectPath = "D:\CBS\cbs_2.0_backend\Microservices\CommonModules\Common-Modules\Common-Modules.csproj"
-        MigrationsFolder = "D:\CBS\cbs_2.0_backend\Microservices\CommonModules\Common-Modules\Migrations"
-        DatabaseName = "COMMON_DB"
-    }
-    @{
-        Name = "FRM"
-        ProjectPath = "D:\CBS\cbs_2.0_backend\Microservices\FRM\Frm\Frm.csproj"
-	MigrationsFolder = "D:\CBS\cbs_2.0_backend\Microservices\FRM\Frm\Migrations"
-        DatabaseName = "FRM"
-    }
-    @{
-        Name = "Reports"
-        ProjectPath = "D:\CBS\cbs_2.0_backend\Microservices\Reports\Reports\Reports.csproj"
-	MigrationsFolder = "D:\CBS\cbs_2.0_backend\Microservices\Reports\Reports\Migrations"
-        DatabaseName = "REPORTS"
+    foreach ($m in @(Read-MigrationModules)) {
+        if (-not $m.PgDatabase) { continue }
+        @{
+            Name             = $m.Name
+            Enabled          = $m.Enabled
+            ProjectPath      = $m.ProjectPath
+            MigrationsFolder = (Get-ModuleMigrationsFolder $m)
+            DatabaseName     = $m.PgDatabase
+        }
     }
 )
+
+if ($Only) {
+    # powershell -File passes "-Only A,B" as one string; split it here.
+    $Only = @($Only | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $services = @($services | Where-Object { $Only -contains $_.Name })
+}
+else {
+    $services = @($services | Where-Object { $_.Enabled })
+}
+if ($services.Count -eq 0) { throw "No PostgreSQL module selected. Check modules.json / -Only." }
+
+foreach ($service in $services) {
+    if (-not (Test-Path -LiteralPath $service.ProjectPath)) { throw "$($service.Name): project not found: $($service.ProjectPath)" }
+}
 
 # -------------------------------------------
 # POSTGRESQL CONNECTION
@@ -84,11 +98,12 @@ WHERE lower(datname)=lower('$($service.DatabaseName)');
             --startup-project $service.ProjectPath `
             --no-build
 
+        # No --no-build: the DLL built above predates the new migration, so --no-build
+        # applies nothing ("database is already up to date").
         Write-Output "[$($service.Name)] Updating DB..."
         dotnet ef database update `
             --project $service.ProjectPath `
-            --startup-project $service.ProjectPath `
-            --no-build
+            --startup-project $service.ProjectPath
 
         Write-Output "[$($service.Name)] Completed."
 

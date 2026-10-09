@@ -1,0 +1,47 @@
+{
+    "version":  1,
+    "modules":  [
+                    {
+                        "name":  "CommonModules",
+                        "enabled":  true,
+                        "projectPath":  "D:\\CBS\\cbs_2.0_backend\\Microservices\\CommonModules\\Common-Modules\\Common-Modules.csproj",
+                        "migrationsFolder":  "",
+                        "configKey":  "Common-Module",
+                        "postgres":  {
+                                         "database":  "COMMON_DB"
+                                     },
+                        "oracle":  {
+                                       "service":  "COMMON_DB",
+                                       "user":  "common_db_user"
+                                   }
+                    },
+                    {
+                        "name":  "FRM",
+                        "enabled":  true,
+                        "projectPath":  "D:\\CBS\\cbs_2.0_backend\\Microservices\\FRM\\Frm\\Frm.csproj",
+                        "migrationsFolder":  "",
+                        "configKey":  "FRM",
+                        "postgres":  {
+                                         "database":  "FRM"
+                                     },
+                        "oracle":  {
+                                       "service":  "FRM_DB",
+                                       "user":  "frm_db_user"
+                                   }
+                    },
+                    {
+                        "name":  "Reports",
+                        "enabled":  true,
+                        "projectPath":  "D:\\CBS\\cbs_2.0_backend\\Microservices\\Reports\\Reports\\Reports.csproj",
+                        "migrationsFolder":  "",
+                        "configKey":  "Reports",
+                        "postgres":  {
+                                         "database":  "REPORTS"
+                                     },
+                        "oracle":  {
+                                       "service":  "REPORT_DB",
+                                       "user":  "report_db_user"
+                                   }
+                    }
+                ]
+}
